@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Voting API Test</title>
+</head>
+<body>
+    <h2>Secure Voting API Test</h2>
+    <p>Log in as your spare test voter in another tab first.</p>
+
+    <label>Engineering NULASS Election ID:</label>
+    <input type="number" id="election_id" placeholder="Enter election ID">
+
+    <p>Enter one position ID and candidate ID for each active position.</p>
+    <textarea id="selections" rows="12" cols="55">{
+  "1": 1,
+  "2": 2
+}</textarea>
+
+    <button onclick="submitVotes()">Test API</button>
+    <pre id="result"></pre>
+
+    <script>
+    async function submitVotes() {
+        const electionId = Number(
+            document.getElementById("election_id").value
+        );
+
+        let selections;
+
+        try {
+            selections = JSON.parse(
+                document.getElementById("selections").value
+            );
+        } catch {
+            document.getElementById("result").textContent =
+                "Selections must be valid JSON.";
+            return;
+        }
+
+        try {
+            const response = await fetch("api/vote.php", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                credentials: "same-origin",
+                body: JSON.stringify({
+                    election_id: electionId,
+                    selections: selections
+                })
+            });
+
+            const data = await response.json();
+            document.getElementById("result").textContent =
+                JSON.stringify(data, null, 2);
+        } catch (error) {
+            document.getElementById("result").textContent =
+                "Request failed: " + error.message;
+        }
+    }
+    </script>
+</body>
+</html>
