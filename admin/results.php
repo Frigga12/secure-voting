@@ -1,7 +1,11 @@
 
 <?php
-session_start();
 
+if (session_status() !== PHP_SESSION_ACTIVE) {
+    session_start();
+}
+
+/* Only authenticated administrators can access results. */
 if (
     !isset($_SESSION["user_id"]) ||
     ($_SESSION["role"] ?? "") !== "admin"
@@ -10,126 +14,7 @@ if (
     exit;
 }
 
-require_once "../config/database.php";
-
-/* Load elections */
-$stmt = $pdo->query("
-    SELECT id, election_name, description, start_date, end_date, status
-    FROM elections
-    ORDER BY id DESC
-");
-$elections = $stmt->fetchAll();
-
-$selected_election = null;
-$selected_election_id = 0;
-$results = [];
-$total_votes = 0;
-$candidate_total = 0;
-
-if (!empty($elections)) {
-    $requested_id = filter_input(INPUT_GET, "election", FILTER_VALIDATE_INT);
-
-    $selected_election_id = $requested_id
-        ? (int)$requested_id
-        : (int)$elections[0]["id"];
-
-    $stmt = $pdo->prepare("
-        SELECT *
-        FROM elections
-        WHERE id = :id
-        LIMIT 1
-    ");
-    $stmt->execute(["id" => $selected_election_id]);
-    $selected_election = $stmt->fetch();
-
-    if (!$selected_election) {
-        $selected_election_id = (int)$elections[0]["id"];
-        $stmt->execute(["id" => $selected_election_id]);
-        $selected_election = $stmt->fetch();
-    }
-
-    /* Load candidates and vote counts for the selected election */
-    $stmt = $pdo->prepare("
-        SELECT
-            p.id AS position_id,
-            p.position_name,
-            p.display_order,
-            c.id AS candidate_id,
-            c.full_name,
-            c.student_id,
-            c.department,
-            c.photo,
-            COUNT(v.id) AS vote_count
-        FROM positions p
-        LEFT JOIN candidates c
-            ON c.position_id = p.id
-            AND c.election_id = :candidate_election_id
-            AND c.status = 'active'
-        LEFT JOIN votes v
-            ON v.candidate_id = c.id
-            AND v.position_id = p.id
-            AND v.election_id = :vote_election_id
-        WHERE p.status = 'active'
-        GROUP BY
-            p.id,
-            p.position_name,
-            p.display_order,
-            c.id,
-            c.full_name,
-            c.student_id,
-            c.department,
-            c.photo
-        ORDER BY
-            p.display_order ASC,
-            vote_count DESC,
-            c.full_name ASC
-    ");
-
-    $stmt->execute([
-        "candidate_election_id" => $selected_election_id,
-        "vote_election_id" => $selected_election_id
-    ]);
-
-    $result_rows = $stmt->fetchAll();
-
-    /* Group candidates under their positions */
-    foreach ($result_rows as $row) {
-        $position_id = (int)$row["position_id"];
-
-        if (!isset($results[$position_id])) {
-            $results[$position_id] = [
-                "position_name" => $row["position_name"],
-                "candidates" => [],
-                "total_votes" => 0
-            ];
-        }
-
-        if ($row["candidate_id"] !== null) {
-            $vote_count = (int)$row["vote_count"];
-
-            $results[$position_id]["candidates"][] = [
-                "id" => (int)$row["candidate_id"],
-                "full_name" => $row["full_name"],
-                "student_id" => $row["student_id"],
-                "department" => $row["department"],
-                "photo" => $row["photo"],
-                "vote_count" => $vote_count
-            ];
-
-            $results[$position_id]["total_votes"] += $vote_count;
-            $candidate_total++;
-        }
-    }
-
-    /* Count submitted vote records for this election */
-    $stmt = $pdo->prepare("
-        SELECT COUNT(*)
-        FROM votes
-        WHERE election_id = :election_id
-    ");
-    $stmt->execute(["election_id" => $selected_election_id]);
-    $total_votes = (int)$stmt->fetchColumn();
-}
+require_once __DIR__ . "/../config/database.php";
 
 function e($value): string
 {
@@ -144,9 +29,9 @@ function resultDate($value): string
 
     $timestamp = strtotime((string)$value);
 
-    return $timestamp
+    return $timestamp !== false
         ? date("d M Y, g:i A", $timestamp)
-        : (string)$value;
+        : "Not set";
 }
 
 function resultStatus($status): string
@@ -163,15 +48,195 @@ function resultStatus($status): string
 
     return "inactive";
 }
+
+/* Load all elections. */
+$stmt = $pdo->query("
+    SELECT id, election_name, description, start_date, end_date, status
+    FROM elections
+    ORDER BY id DESC
+");
+
+$elections = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+$selected_election = null;
+$selected_election_id = 0;
+$results = [];
+$total_votes = 0;
+$candidate_total = 0;
+
+/* Load the selected election. */
+if (!empty($elections)) {
+
+    $requested_id = filter_input(INPUT_GET, "election", FILTER_VALIDATE_INT);
+
+    $selected_election_id = (
+        $requested_id && $requested_id > 0
+    )
+        ? (int)$requested_id
+        : (int)$elections[0]["id"];
+
+    $stmt = $pdo->prepare("
+        SELECT *
+        FROM elections
+        WHERE id = :id
+        LIMIT 1
+    ");
+
+    $stmt->execute(["id" => $selected_election_id]);
+    $selected_election = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if (!$selected_election) {
+        $selected_election_id = (int)$elections[0]["id"];
+
+        $stmt->execute(["id" => $selected_election_id]);
+        $selected_election = $stmt->fetch(PDO::FETCH_ASSOC);
+    }
+
+    /*
+     * Retrieve candidates and their votes for THIS election only.
+     */
+    $stmt = $pdo->prepare("
+        SELECT
+            p.id AS position_id,
+            p.position_name,
+            p.display_order,
+            c.id AS candidate_id,
+            c.full_name,
+            c.student_id,
+            c.department,
+            c.photo,
+            COUNT(v.id) AS vote_count
+
+        FROM positions p
+
+        LEFT JOIN candidates c
+            ON c.position_id = p.id
+            AND c.election_id = :candidate_election_id
+            AND c.status = 'active'
+
+        LEFT JOIN votes v
+            ON v.candidate_id = c.id
+            AND v.position_id = p.id
+            AND v.election_id = :vote_election_id
+
+        WHERE p.status = 'active'
+
+        GROUP BY
+            p.id,
+            p.position_name,
+            p.display_order,
+            c.id,
+            c.full_name,
+            c.student_id,
+            c.department,
+            c.photo
+
+        ORDER BY
+            p.display_order ASC,
+            vote_count DESC,
+            c.full_name ASC
+    ");
+
+    $stmt->execute([
+        "candidate_election_id" => $selected_election_id,
+        "vote_election_id" => $selected_election_id
+    ]);
+
+    $result_rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    /* Group candidates under their positions. */
+    foreach ($result_rows as $row) {
+
+        $position_id = (int)$row["position_id"];
+
+        if (!isset($results[$position_id])) {
+            $results[$position_id] = [
+                "position_name" => $row["position_name"],
+                "candidates" => [],
+                "total_votes" => 0
+            ];
+        }
+
+        if ($row["candidate_id"] !== null) {
+
+            $vote_count = (int)$row["vote_count"];
+
+            $results[$position_id]["candidates"][] = [
+                "id" => (int)$row["candidate_id"],
+                "full_name" => $row["full_name"],
+                "student_id" => $row["student_id"],
+                "department" => $row["department"],
+                "photo" => $row["photo"],
+                "vote_count" => $vote_count
+            ];
+
+            $results[$position_id]["total_votes"] += $vote_count;
+            $candidate_total++;
+        }
+    }
+
+    /* Count submitted vote records in this election only. */
+    $stmt = $pdo->prepare("
+        SELECT COUNT(*)
+        FROM votes
+        WHERE election_id = :election_id
+    ");
+
+    $stmt->execute([
+        "election_id" => $selected_election_id
+    ]);
+
+    $total_votes = (int)$stmt->fetchColumn();
+}
+
+/* Prepare chart information using the actual database results. */
+$chart_data = [];
+
+foreach ($results as $position_id => $position) {
+
+    $chart_data[(string)$position_id] = [
+        "position_name" => $position["position_name"],
+        "total_votes" => (int)$position["total_votes"],
+
+        "candidates" => array_map(
+            static function ($candidate) {
+                return [
+                    "name" => (string)$candidate["full_name"],
+                    "votes" => (int)$candidate["vote_count"]
+                ];
+            },
+            $position["candidates"]
+        )
+    ];
+}
+
+$chart_json = json_encode(
+    $chart_data,
+    JSON_HEX_TAG |
+    JSON_HEX_APOS |
+    JSON_HEX_AMP |
+    JSON_HEX_QUOT |
+    JSON_UNESCAPED_UNICODE
+);
+
+if ($chart_json === false) {
+    $chart_json = "{}";
+}
+
 ?>
+
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
+
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
     <title>Election Results | Secure Voting</title>
 
     <style>
+
         :root {
             --navy: #142b4a;
             --navy-light: #203e64;
@@ -184,7 +249,7 @@ function resultStatus($status): string
             --border: #e0e8f2;
             --green: #15803d;
             --green-bg: #dcfce7;
-            --shadow: 0 8px 26px rgba(20, 43, 74, .06);
+            --shadow: 0 8px 26px rgba(20,43,74,.06);
         }
 
         * {
@@ -200,7 +265,10 @@ function resultStatus($status): string
 
         a {
             color: inherit;
+            text-decoration: none;
         }
+
+        /* HEADER */
 
         .topbar {
             background: var(--navy);
@@ -236,7 +304,6 @@ function resultStatus($status): string
         .brand-name {
             font-size: 17px;
             font-weight: 750;
-            letter-spacing: .2px;
         }
 
         .brand-subtitle {
@@ -253,7 +320,6 @@ function resultStatus($status): string
         }
 
         .top-links a {
-            text-decoration: none;
             font-size: 13px;
             font-weight: 650;
             padding: 10px 13px;
@@ -269,6 +335,8 @@ function resultStatus($status): string
             background: white;
             color: var(--navy);
         }
+
+        /* PAGE */
 
         .page {
             width: min(1240px, 100%);
@@ -295,8 +363,7 @@ function resultStatus($status): string
 
         h1 {
             margin: 0;
-            font-size: clamp(26px, 3vw, 34px);
-            letter-spacing: -.8px;
+            font-size: clamp(26px,3vw,34px);
             color: var(--navy);
         }
 
@@ -317,7 +384,6 @@ function resultStatus($status): string
             border-radius: 10px;
             background: var(--navy);
             color: white;
-            text-decoration: none;
             font-weight: 700;
             font-size: 13px;
             cursor: pointer;
@@ -341,7 +407,8 @@ function resultStatus($status): string
         .panel,
         .stat,
         .position-card,
-        .empty {
+        .empty,
+        .chart-panel {
             background: var(--white);
             border: 1px solid var(--border);
             border-radius: 16px;
@@ -366,9 +433,11 @@ function resultStatus($status): string
             line-height: 1.6;
         }
 
+        /* ELECTION FILTER */
+
         .filter-grid {
             display: grid;
-            grid-template-columns: minmax(0, 1fr) auto;
+            grid-template-columns: minmax(0,1fr) auto;
             gap: 18px;
             align-items: end;
         }
@@ -456,9 +525,11 @@ function resultStatus($status): string
             background: #fef3c7;
         }
 
+        /* STATISTICS */
+
         .stats {
             display: grid;
-            grid-template-columns: repeat(3, minmax(0, 1fr));
+            grid-template-columns: repeat(3,minmax(0,1fr));
             gap: 18px;
             margin-bottom: 28px;
         }
@@ -525,7 +596,6 @@ function resultStatus($status): string
         .stat-value {
             margin-top: 14px;
             font-size: 32px;
-            line-height: 1.1;
             font-weight: 800;
             color: var(--navy);
         }
@@ -535,6 +605,132 @@ function resultStatus($status): string
             color: var(--muted);
             font-size: 12px;
         }
+
+        /* PIE / DOUGHNUT CHART */
+
+        .chart-panel {
+            padding: 24px;
+            margin-bottom: 28px;
+        }
+
+        .chart-heading {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 18px;
+            margin-bottom: 20px;
+        }
+
+        .chart-heading h2 {
+            margin: 0;
+            color: var(--navy);
+            font-size: 20px;
+        }
+
+        .chart-heading p {
+            margin: 6px 0 0;
+            color: var(--muted);
+            font-size: 13px;
+            line-height: 1.6;
+        }
+
+        .chart-filter {
+            width: min(100%,310px);
+            flex-shrink: 0;
+        }
+
+        .chart-layout {
+            display: grid;
+            grid-template-columns: minmax(260px,370px) minmax(0,1fr);
+            align-items: center;
+            gap: 28px;
+            padding: 18px 10px 8px;
+            border-top: 1px solid #edf1f7;
+        }
+
+        .chart-wrap {
+            position: relative;
+            width: 100%;
+            max-width: 350px;
+            margin: auto;
+            aspect-ratio: 1/1;
+        }
+
+        #voteChart {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+
+        .chart-tooltip {
+            position: absolute;
+            z-index: 5;
+            display: none;
+            max-width: 210px;
+            padding: 9px 11px;
+            border-radius: 9px;
+            background: #102541;
+            color: white;
+            font-size: 11px;
+            line-height: 1.5;
+            box-shadow: 0 8px 20px rgba(16,37,65,.2);
+            pointer-events: none;
+        }
+
+        .chart-legend {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 11px;
+            align-content: center;
+        }
+
+        .legend-item {
+            display: grid;
+            grid-template-columns: 12px minmax(0,1fr) auto;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 12px;
+            border: 1px solid #edf1f7;
+            border-radius: 10px;
+            background: #fbfdff;
+        }
+
+        .legend-swatch {
+            width: 11px;
+            height: 30px;
+            border-radius: 5px;
+        }
+
+        .legend-name {
+            color: var(--navy);
+            font-size: 12px;
+            font-weight: 750;
+            overflow-wrap: anywhere;
+        }
+
+        .legend-meta {
+            margin-top: 3px;
+            color: var(--muted);
+            font-size: 11px;
+        }
+
+        .legend-percent {
+            color: var(--navy);
+            font-size: 13px;
+            font-weight: 800;
+            white-space: nowrap;
+        }
+
+        .chart-empty {
+            padding: 20px;
+            border-radius: 10px;
+            background: #f6f8fc;
+            color: var(--muted);
+            font-size: 13px;
+            text-align: center;
+        }
+
+        /* POSITION RESULTS */
 
         .section-heading {
             display: flex;
@@ -567,7 +763,7 @@ function resultStatus($status): string
             align-items: center;
             gap: 15px;
             padding: 20px 23px;
-            background: linear-gradient(105deg, #e4efff, #e7f8f5);
+            background: linear-gradient(105deg,#e4efff,#e7f8f5);
             border-bottom: 1px solid var(--border);
         }
 
@@ -609,7 +805,7 @@ function resultStatus($status): string
 
         .candidate-row {
             display: grid;
-            grid-template-columns: 54px minmax(0, 1fr) 82px 90px;
+            grid-template-columns: 54px minmax(0,1fr) 82px 90px;
             align-items: center;
             gap: 16px;
             padding: 18px 0;
@@ -703,7 +899,7 @@ function resultStatus($status): string
         .progress-fill {
             height: 100%;
             border-radius: 10px;
-            background: linear-gradient(90deg, var(--blue), var(--teal));
+            background: linear-gradient(90deg,var(--blue),var(--teal));
         }
 
         .no-candidates {
@@ -754,7 +950,10 @@ function resultStatus($status): string
             font-size: 12px;
         }
 
+        /* RESPONSIVE DESIGN */
+
         @media (max-width: 760px) {
+
             .topbar {
                 padding: 0 18px 12px;
             }
@@ -792,6 +991,29 @@ function resultStatus($status): string
                 padding: 19px;
             }
 
+            .chart-heading {
+                flex-direction: column;
+            }
+
+            .chart-filter {
+                width: 100%;
+            }
+
+            .chart-layout {
+                grid-template-columns: 1fr;
+                gap: 18px;
+            }
+
+            .chart-wrap {
+                max-width: 310px;
+            }
+
+            .chart-legend {
+                max-width: 520px;
+                width: 100%;
+                margin: auto;
+            }
+
             .position-header {
                 align-items: flex-start;
             }
@@ -801,7 +1023,7 @@ function resultStatus($status): string
             }
 
             .candidate-row {
-                grid-template-columns: 46px minmax(0, 1fr);
+                grid-template-columns: 46px minmax(0,1fr);
                 gap: 11px;
             }
 
@@ -843,8 +1065,9 @@ function resultStatus($status): string
             .topbar,
             .page-heading .button,
             .filter-grid .button,
-            .footer {
-                display: none;
+            .footer,
+            .chart-filter {
+                display: none !important;
             }
 
             body {
@@ -858,18 +1081,24 @@ function resultStatus($status): string
 
             .panel,
             .stat,
-            .position-card {
+            .position-card,
+            .chart-panel {
                 box-shadow: none;
                 break-inside: avoid;
             }
         }
+
     </style>
+
 </head>
 
 <body>
+
 <header class="topbar">
+
     <div class="brand">
         <div class="brand-icon" aria-hidden="true">S</div>
+
         <div>
             <div class="brand-name">Secure Voting System</div>
             <div class="brand-subtitle">Administration Portal</div>
@@ -883,50 +1112,77 @@ function resultStatus($status): string
         <a href="positions.php">Positions</a>
         <a href="elections.php">Elections</a>
         <a href="results.php" class="current">Results</a>
+        <a href="../logout.php">Log out</a>
     </nav>
+
 </header>
 
+
 <main class="page">
+
     <div class="page-heading">
+
         <div>
             <div class="eyebrow">Election management</div>
+
             <h1>Election Results</h1>
+
             <p class="subtitle">
-                Review vote counts, candidate standings, and results by position.
+                Review vote counts, candidate standings, and visual results by position.
             </p>
         </div>
 
         <a href="dashboard.php" class="button button-outline">
             &#8592; Dashboard
         </a>
+
     </div>
 
+
     <?php if (empty($elections)): ?>
+
         <section class="empty">
+
             <div class="empty-icon" aria-hidden="true">&#9776;</div>
+
             <h2>No Elections Yet</h2>
+
             <p>
                 Create an election before viewing candidate vote counts and results.
             </p>
-            <a href="elections.php" class="button">Manage Elections</a>
+
+            <a href="elections.php" class="button">
+                Manage Elections
+            </a>
+
         </section>
+
     <?php else: ?>
 
+
+        <!-- ELECTION SELECTION -->
+
         <section class="panel">
+
             <h2 class="panel-heading">Choose an Election</h2>
+
             <p class="panel-description">
-                Select an election to view its candidate vote counts.
+                Select an election to view its candidate vote counts and pie chart.
             </p>
 
             <form method="GET" action="results.php" class="filter-grid">
+
                 <div>
                     <label for="election">Election</label>
+
                     <select
                         name="election"
                         id="election"
                         onchange="this.form.submit()"
                     >
+
                         <?php foreach ($elections as $election): ?>
+
                             <option
                                 value="<?= (int)$election["id"] ?>"
                                 <?= (int)$election["id"] === $selected_election_id
@@ -935,22 +1191,31 @@ function resultStatus($status): string
                             >
                                 <?= e($election["election_name"]) ?>
                             </option>
+
                         <?php endforeach; ?>
+
                     </select>
                 </div>
 
                 <button type="submit" class="button">
                     View Results
                 </button>
+
             </form>
 
+
             <?php if ($selected_election): ?>
+
                 <div class="election-info">
+
                     <span class="info-chip">
+
                         <strong>Status:</strong>
+
                         <span class="status <?= e(resultStatus($selected_election["status"])) ?>">
                             <?= e($selected_election["status"]) ?>
                         </span>
+
                     </span>
 
                     <span class="info-chip">
@@ -962,111 +1227,287 @@ function resultStatus($status): string
                         <strong>Ends:</strong>
                         <?= e(resultDate($selected_election["end_date"])) ?>
                     </span>
+
                 </div>
+
             <?php endif; ?>
+
         </section>
 
+
+        <!-- ELECTION STATISTICS -->
+
         <section class="stats" aria-label="Election statistics">
+
             <div class="stat">
+
                 <div class="stat-top">
-                    <div class="stat-label">Total Vote Records</div>
-                    <div class="stat-icon" aria-hidden="true">&#10003;</div>
+
+                    <div class="stat-label">
+                        Total Vote Records
+                    </div>
+
+                    <div class="stat-icon" aria-hidden="true">
+                        &#10003;
+                    </div>
+
                 </div>
+
                 <div class="stat-value">
                     <?= number_format($total_votes) ?>
                 </div>
+
                 <div class="stat-note">
                     Submitted vote records for this election
                 </div>
+
             </div>
 
+
             <div class="stat">
+
                 <div class="stat-top">
-                    <div class="stat-label">Positions</div>
-                    <div class="stat-icon" aria-hidden="true">&#9776;</div>
+
+                    <div class="stat-label">
+                        Positions
+                    </div>
+
+                    <div class="stat-icon" aria-hidden="true">
+                        &#9776;
+                    </div>
+
                 </div>
+
                 <div class="stat-value">
                     <?= number_format(count($results)) ?>
                 </div>
+
                 <div class="stat-note">
                     Active positions displayed below
                 </div>
+
             </div>
 
+
             <div class="stat">
+
                 <div class="stat-top">
-                    <div class="stat-label">Candidates</div>
-                    <div class="stat-icon" aria-hidden="true">&#9823;</div>
+
+                    <div class="stat-label">
+                        Candidates
+                    </div>
+
+                    <div class="stat-icon" aria-hidden="true">
+                        &#9823;
+                    </div>
+
                 </div>
+
                 <div class="stat-value">
                     <?= number_format($candidate_total) ?>
                 </div>
+
                 <div class="stat-note">
                     Active candidates in this election
                 </div>
+
             </div>
+
         </section>
 
+
+        <!-- INTERACTIVE PIE / DOUGHNUT CHART -->
+
+        <?php if (!empty($results)): ?>
+
+            <section class="chart-panel">
+
+                <div class="chart-heading">
+
+                    <div>
+
+                        <div class="eyebrow">
+                            Visual vote breakdown
+                        </div>
+
+                        <h2>Candidate Vote Distribution</h2>
+
+                        <p>
+                            Choose a position to compare each candidate's
+                            share of the votes in this election.
+                        </p>
+
+                    </div>
+
+
+                    <div class="chart-filter">
+
+                        <label for="chartPosition">
+                            Select Position
+                        </label>
+
+                        <select id="chartPosition">
+
+                            <?php foreach ($results as $position_id => $position): ?>
+
+                                <option value="<?= (int)$position_id ?>">
+                                    <?= e($position["position_name"]) ?>
+                                </option>
+
+                            <?php endforeach; ?>
+
+                        </select>
+
+                    </div>
+
+                </div>
+
+
+                <div class="chart-layout">
+
+                    <div class="chart-wrap" id="chartWrap">
+
+                        <canvas
+                            id="voteChart"
+                            role="img"
+                            aria-label="Chart showing candidate vote distribution"
+                        ></canvas>
+
+                        <div
+                            class="chart-tooltip"
+                            id="chartTooltip"
+                        ></div>
+
+                    </div>
+
+
+                    <div
+                        class="chart-legend"
+                        id="chartLegend"
+                        aria-live="polite"
+                    ></div>
+
+                </div>
+
+            </section>
+
+        <?php endif; ?>
+
+
+        <!-- RESULTS BY POSITION -->
+
         <div class="section-heading">
+
             <div>
+
                 <h2>Results by Position</h2>
+
                 <p>
                     Candidate vote counts and percentage of votes for each position.
                 </p>
+
             </div>
+
         </div>
 
+
         <?php if (empty($results)): ?>
+
             <section class="empty">
-                <div class="empty-icon" aria-hidden="true">&#9776;</div>
+
+                <div class="empty-icon" aria-hidden="true">
+                    &#9776;
+                </div>
+
                 <h2>No Results Available</h2>
-                <p>No active positions were found for this election.</p>
+
+                <p>
+                    No active positions were found for this election.
+                </p>
+
             </section>
+
         <?php else: ?>
 
             <?php $position_number = 0; ?>
 
             <?php foreach ($results as $position): ?>
+
                 <?php $position_number++; ?>
 
                 <section class="position-card">
+
                     <div class="position-header">
+
                         <div class="position-heading">
+
                             <div class="position-number">
-                                <?= str_pad((string)$position_number, 2, "0", STR_PAD_LEFT) ?>
+
+                                <?= str_pad(
+                                    (string)$position_number,
+                                    2,
+                                    "0",
+                                    STR_PAD_LEFT
+                                ) ?>
+
                             </div>
 
                             <div>
-                                <h3><?= e($position["position_name"]) ?></h3>
+
+                                <h3>
+                                    <?= e($position["position_name"]) ?>
+                                </h3>
+
                                 <div class="position-total">
+
                                     <?= number_format($position["total_votes"]) ?>
                                     vote(s) recorded for this position
+
                                 </div>
+
                             </div>
+
                         </div>
+
                     </div>
 
+
                     <div class="candidate-list">
+
                         <?php if (empty($position["candidates"])): ?>
+
                             <div class="no-candidates">
-                                No active candidates have been added for this position
-                                in this election.
+
+                                No active candidates have been added
+                                for this position in this election.
+
                             </div>
+
                         <?php else: ?>
 
                             <?php
-                            $highest_votes = max(array_column(
-                                $position["candidates"],
-                                "vote_count"
-                            ));
+
+                            $highest_votes = max(
+                                array_column(
+                                    $position["candidates"],
+                                    "vote_count"
+                                )
+                            );
+
                             ?>
 
+
                             <?php foreach ($position["candidates"] as $candidate): ?>
+
                                 <?php
+
                                 $vote_count = (int)$candidate["vote_count"];
 
                                 $percentage = $position["total_votes"] > 0
-                                    ? ($vote_count / $position["total_votes"]) * 100
+                                    ? (
+                                        $vote_count /
+                                        $position["total_votes"]
+                                    ) * 100
                                     : 0;
 
                                 $is_leading = (
@@ -1075,58 +1516,94 @@ function resultStatus($status): string
                                 );
 
                                 $photo_name = !empty($candidate["photo"])
-                                    ? basename($candidate["photo"])
+                                    ? basename((string)$candidate["photo"])
                                     : "";
+
                                 ?>
 
+
                                 <div class="candidate-row">
+
+
                                     <?php if ($photo_name !== ""): ?>
+
                                         <img
                                             src="../uploads/candidates/<?= rawurlencode($photo_name) ?>"
                                             alt="<?= e($candidate["full_name"]) ?>"
                                             class="candidate-photo"
                                             loading="lazy"
+                                            onerror="this.style.display='none';"
                                         >
+
                                     <?php else: ?>
-                                        <div class="photo-placeholder" aria-hidden="true">
-                                            <?= e(strtoupper(substr(
-                                                (string)$candidate["full_name"],
-                                                0,
-                                                1
-                                            ))) ?>
+
+                                        <div
+                                            class="photo-placeholder"
+                                            aria-hidden="true"
+                                        >
+                                            <?= e(
+                                                strtoupper(
+                                                    substr(
+                                                        (string)$candidate["full_name"],
+                                                        0,
+                                                        1
+                                                    )
+                                                )
+                                            ) ?>
                                         </div>
+
                                     <?php endif; ?>
 
+
                                     <div>
+
                                         <div class="candidate-name">
                                             <?= e($candidate["full_name"]) ?>
                                         </div>
 
                                         <div class="candidate-details">
+
                                             <?= e($candidate["student_id"]) ?>
 
                                             <?php if (!empty($candidate["department"])): ?>
+
                                                 &middot;
+
                                                 <?= e($candidate["department"]) ?>
+
                                             <?php endif; ?>
+
                                         </div>
 
+
                                         <?php if ($is_leading): ?>
+
                                             <span class="winner">
                                                 &#10003; Leading
                                             </span>
+
                                         <?php endif; ?>
+
                                     </div>
+
 
                                     <div class="vote-number">
+
                                         <?= number_format($vote_count) ?>
+
                                         <small>vote(s)</small>
+
                                     </div>
 
+
                                     <div class="percentage-wrap">
+
                                         <div class="percentage">
+
                                             <?= number_format($percentage, 1) ?>%
+
                                         </div>
+
                                         <div
                                             class="progress-track"
                                             role="progressbar"
@@ -1135,26 +1612,526 @@ function resultStatus($status): string
                                             aria-valuemax="100"
                                             aria-valuenow="<?= number_format($percentage, 1, ".", "") ?>"
                                         >
+
                                             <div
                                                 class="progress-fill"
                                                 style="width: <?= max(0, min(100, $percentage)) ?>%;"
                                             ></div>
+
                                         </div>
+
                                     </div>
+
                                 </div>
+
                             <?php endforeach; ?>
 
                         <?php endif; ?>
+
                     </div>
+
                 </section>
+
             <?php endforeach; ?>
 
         <?php endif; ?>
+
     <?php endif; ?>
+
 
     <footer class="footer">
         Secure Voting System &copy; <?= date("Y") ?> · Administration Portal
     </footer>
+
 </main>
+
+
+<?php if (!empty($results)): ?>
+
+<script type="application/json" id="resultsChartData"><?= $chart_json ?></script>
+
+<script>
+
+(function () {
+
+    "use strict";
+
+    const dataElement = document.getElementById("resultsChartData");
+    const positionSelect = document.getElementById("chartPosition");
+    const canvas = document.getElementById("voteChart");
+    const chartWrap = document.getElementById("chartWrap");
+    const legend = document.getElementById("chartLegend");
+    const tooltip = document.getElementById("chartTooltip");
+
+    if (!dataElement || !positionSelect || !canvas || !legend) {
+        return;
+    }
+
+    let chartData = {};
+
+    try {
+
+        chartData = JSON.parse(
+            dataElement.textContent || "{}"
+        );
+
+    } catch (error) {
+
+        legend.textContent = "Unable to load chart data.";
+        return;
+
+    }
+
+    const context = canvas.getContext("2d");
+
+    const colors = [
+        "#2563eb",
+        "#0d9488",
+        "#8b5cf6",
+        "#f59e0b",
+        "#ef4444",
+        "#0891b2",
+        "#65a30d",
+        "#db2777",
+        "#64748b",
+        "#7c3aed",
+        "#ea580c",
+        "#0f766e"
+    ];
+
+    let currentSegments = [];
+
+    let centerX = 0;
+    let centerY = 0;
+    let outerRadius = 0;
+    let innerRadius = 0;
+
+
+    function percentage(value, total) {
+
+        return total > 0
+            ? (value / total) * 100
+            : 0;
+
+    }
+
+
+    /* Build the candidate legend. */
+
+    function addLegend(position) {
+
+        legend.replaceChildren();
+
+        if (
+            !position ||
+            !Array.isArray(position.candidates) ||
+            position.candidates.length === 0
+        ) {
+
+            const empty = document.createElement("div");
+
+            empty.className = "chart-empty";
+
+            empty.textContent =
+                "No active candidates are available for this position.";
+
+            legend.appendChild(empty);
+
+            return;
+        }
+
+
+        position.candidates.forEach(function (candidate, index) {
+
+            const item = document.createElement("div");
+
+            item.className = "legend-item";
+
+
+            const swatch = document.createElement("span");
+
+            swatch.className = "legend-swatch";
+
+            swatch.style.background =
+                colors[index % colors.length];
+
+
+            const details = document.createElement("div");
+
+
+            const name = document.createElement("div");
+
+            name.className = "legend-name";
+
+            name.textContent = candidate.name;
+
+
+            const meta = document.createElement("div");
+
+            meta.className = "legend-meta";
+
+            const voteWord =
+                Number(candidate.votes) === 1
+                    ? "vote"
+                    : "votes";
+
+            meta.textContent =
+                Number(candidate.votes).toLocaleString() +
+                " " +
+                voteWord;
+
+
+            details.appendChild(name);
+            details.appendChild(meta);
+
+
+            const percent = document.createElement("span");
+
+            percent.className = "legend-percent";
+
+            percent.textContent =
+                percentage(
+                    Number(candidate.votes),
+                    Number(position.total_votes)
+                ).toFixed(1) + "%";
+
+
+            item.appendChild(swatch);
+            item.appendChild(details);
+            item.appendChild(percent);
+
+            legend.appendChild(item);
+
+        });
+
+    }
+
+
+    /* Draw the interactive doughnut chart. */
+
+    function drawChart() {
+
+        const position = chartData[positionSelect.value];
+
+        if (!position) {
+            return;
+        }
+
+        const rect = canvas.getBoundingClientRect();
+
+        const width = Math.max(220, rect.width);
+        const height = Math.max(220, rect.height);
+
+        const ratio = Math.max(
+            1,
+            window.devicePixelRatio || 1
+        );
+
+        canvas.width = Math.round(width * ratio);
+        canvas.height = Math.round(height * ratio);
+
+        context.setTransform(
+            ratio,
+            0,
+            0,
+            ratio,
+            0,
+            0
+        );
+
+        context.clearRect(
+            0,
+            0,
+            width,
+            height
+        );
+
+
+        const chartSize = Math.min(width, height);
+
+        centerX = width / 2;
+        centerY = height / 2;
+
+        outerRadius = chartSize * 0.39;
+        innerRadius = chartSize * 0.255;
+
+
+        const total =
+            Number(position.total_votes) || 0;
+
+        const candidates =
+            Array.isArray(position.candidates)
+                ? position.candidates
+                : [];
+
+        currentSegments = [];
+
+
+        if (total <= 0) {
+
+            context.beginPath();
+
+            context.arc(
+                centerX,
+                centerY,
+                outerRadius,
+                0,
+                Math.PI * 2
+            );
+
+            context.arc(
+                centerX,
+                centerY,
+                innerRadius,
+                Math.PI * 2,
+                0,
+                true
+            );
+
+            context.closePath();
+
+            context.fillStyle = "#e7edf5";
+            context.fill();
+
+        } else {
+
+            let startAngle = -Math.PI / 2;
+
+            candidates.forEach(function (candidate, index) {
+
+                const votes =
+                    Number(candidate.votes) || 0;
+
+                if (votes <= 0) {
+                    return;
+                }
+
+                const sliceAngle =
+                    (votes / total) * Math.PI * 2;
+
+                const endAngle =
+                    startAngle + sliceAngle;
+
+                const color =
+                    colors[index % colors.length];
+
+
+                context.beginPath();
+
+                context.arc(
+                    centerX,
+                    centerY,
+                    outerRadius,
+                    startAngle,
+                    endAngle
+                );
+
+                context.arc(
+                    centerX,
+                    centerY,
+                    innerRadius,
+                    endAngle,
+                    startAngle,
+                    true
+                );
+
+                context.closePath();
+
+                context.fillStyle = color;
+
+                context.fill();
+
+
+                currentSegments.push({
+
+                    name: candidate.name,
+
+                    votes: votes,
+
+                    percent: percentage(votes, total),
+
+                    start: startAngle,
+
+                    end: endAngle
+
+                });
+
+
+                startAngle = endAngle;
+
+            });
+
+
+            /* Show a neutral ring when all candidates have zero votes. */
+
+            if (currentSegments.length === 0) {
+
+                context.beginPath();
+
+                context.arc(
+                    centerX,
+                    centerY,
+                    outerRadius,
+                    0,
+                    Math.PI * 2
+                );
+
+                context.arc(
+                    centerX,
+                    centerY,
+                    innerRadius,
+                    Math.PI * 2,
+                    0,
+                    true
+                );
+
+                context.closePath();
+
+                context.fillStyle = "#e7edf5";
+                context.fill();
+
+            }
+
+        }
+
+
+        /* Display total votes in the centre of the chart. */
+
+        context.textAlign = "center";
+        context.textBaseline = "middle";
+
+        context.fillStyle = "#142b4a";
+
+        context.font =
+            "800 27px Segoe UI, Arial, sans-serif";
+
+        context.fillText(
+            total.toLocaleString(),
+            centerX,
+            centerY - 7
+        );
+
+        context.fillStyle = "#718096";
+
+        context.font =
+            "700 10px Segoe UI, Arial, sans-serif";
+
+        context.fillText(
+            "TOTAL VOTES",
+            centerX,
+            centerY + 17
+        );
+
+
+        addLegend(position);
+
+        tooltip.style.display = "none";
+
+    }
+
+
+    function hideTooltip() {
+        tooltip.style.display = "none";
+    }
+
+
+    /* Display candidate details when hovering over a chart section. */
+
+    canvas.addEventListener("mousemove", function (event) {
+
+        if (!currentSegments.length) {
+            hideTooltip();
+            return;
+        }
+
+        const rect = canvas.getBoundingClientRect();
+
+        const x =
+            event.clientX - rect.left - centerX;
+
+        const y =
+            event.clientY - rect.top - centerY;
+
+        const distance =
+            Math.sqrt(x * x + y * y);
+
+
+        if (
+            distance < innerRadius ||
+            distance > outerRadius
+        ) {
+
+            hideTooltip();
+            return;
+
+        }
+
+
+        let angle = Math.atan2(y, x);
+
+        while (angle < -Math.PI / 2) {
+            angle += Math.PI * 2;
+        }
+
+
+        const segment = currentSegments.find(function (item) {
+
+            return (
+                angle >= item.start &&
+                angle <= item.end
+            );
+
+        });
+
+
+        if (!segment) {
+            hideTooltip();
+            return;
+        }
+
+
+        tooltip.textContent =
+            segment.name +
+            " — " +
+            segment.votes.toLocaleString() +
+            " vote(s), " +
+            segment.percent.toFixed(1) +
+            "%";
+
+
+        tooltip.style.display = "block";
+
+        tooltip.style.left =
+            Math.max(
+                5,
+                Math.min(
+                    event.offsetX + 12,
+                    chartWrap.clientWidth - 220
+                )
+            ) + "px";
+
+        tooltip.style.top =
+            Math.max(5, event.offsetY - 38) + "px";
+
+    });
+
+
+    canvas.addEventListener("mouseleave", hideTooltip);
+
+    positionSelect.addEventListener("change", drawChart);
+
+    window.addEventListener("resize", drawChart);
+
+
+    /* Draw the first selected position when the page loads. */
+
+    drawChart();
+
+})();
+
+</script>
+
+<?php endif; ?>
+
 </body>
 </html>
