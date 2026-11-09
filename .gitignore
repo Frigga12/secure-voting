@@ -1,0 +1,8 @@
+# Logs
+logs/*.log
+!logs/.gitkeep
+
+# OS / Editor files
+.DS_Store
+Thumbs.db
+*.tmp

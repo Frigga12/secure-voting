@@ -10,7 +10,7 @@ if (!isset($_SESSION["user_id"]) || ($_SESSION["role"] ?? "") !== "admin") {
 require_once "../config/database.php";
 
 $stmt = $pdo->query("
-    SELECT id, student_id, full_name, department, level, status, created_at
+    SELECT id, student_id, email, full_name, department, level, status, created_at
     FROM users
     WHERE role = 'voter'
     ORDER BY created_at DESC
@@ -147,7 +147,12 @@ footer{text-align:center;padding:22px;color:#8490a1;font-size:12px}
                         data-created_at="<?= e($voter["created_at"]) ?>"
                     >
                         <td><?= e($voter["student_id"]) ?></td>
-                        <td><span class="name"><?= e($voter["full_name"] ?: "Name not provided") ?></span></td>
+                        <td>
+                            <span class="name"><?= e($voter["full_name"] ?: "Name not provided") ?></span>
+                            <?php if (!empty($voter["email"])): ?>
+                                <span class="subtext"><?= e($voter["email"]) ?></span>
+                            <?php endif; ?>
+                        </td>
                         <td><?= e($voter["department"] ?: "—") ?></td>
                         <td><?= e($voter["level"] ?: "—") ?></td>
                         <td>

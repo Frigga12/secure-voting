@@ -2,6 +2,13 @@
 if (session_status() !== PHP_SESSION_ACTIVE) {
     session_start();
 }
+
+$flashSuccess = $_SESSION['login_flash_success'] ?? "";
+unset($_SESSION['login_flash_success']);
+
+if (isset($_GET['registered']) && $_GET['registered'] === '1' && empty($flashSuccess)) {
+    $flashSuccess = "Registration successful! You can now log in using your Matric Number and password.";
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -12,14 +19,18 @@ if (session_status() !== PHP_SESSION_ACTIVE) {
 
 <style>
 :root {
-    --navy: #102541;
-    --navy-light: #1b4168;
+    /* 60% DOMINANT: Clean Neutral Canvas */
+    --page: #f8fafc;
+    --surface: #ffffff;
+    --border: #e2e8f0;
+
+    /* 30% SECONDARY: Solid Deep Navy Structure & Typography */
+    --navy: #0f2038;
+    --muted: #64748b;
+
+    /* 10% ACCENT: Solid Royal Blue Interactive Elements */
     --blue: #2563eb;
-    --teal: #0d9488;
-    --white: #ffffff;
-    --muted: #74839a;
-    --border: #dce5ef;
-    --page: #f3f6fb;
+    --blue-hover: #1d4ed8;
 }
 
 * {
@@ -31,7 +42,7 @@ if (session_status() !== PHP_SESSION_ACTIVE) {
 body {
     min-height: 100vh;
     font-family: "Segoe UI", Arial, sans-serif;
-    color: #253449;
+    color: var(--navy);
     background: var(--page);
 }
 
@@ -48,7 +59,7 @@ input {
     grid-template-columns: 1.08fr .92fr;
 }
 
-/* LEFT ANIMATION PANEL */
+/* LEFT BRAND PANEL (Solid Navy 30% Structural Presence) */
 
 .visual-panel {
     position: relative;
@@ -59,17 +70,14 @@ input {
     justify-content: space-between;
     padding: 35px 7%;
     color: white;
-    background:
-        radial-gradient(circle at 85% 15%, rgba(13,148,136,.35), transparent 31%),
-        radial-gradient(circle at 5% 90%, rgba(37,99,235,.28), transparent 38%),
-        linear-gradient(145deg, #102541 0%, #15395d 55%, #102e4b 100%);
+    background: var(--navy);
 }
 
 .visual-panel::before,
 .visual-panel::after {
     content: "";
     position: absolute;
-    border: 1px solid rgba(255,255,255,.09);
+    border: 1px solid rgba(255,255,255,.07);
     border-radius: 50%;
     pointer-events: none;
 }
@@ -88,34 +96,6 @@ input {
     bottom: -100px;
 }
 
-.glow {
-    position: absolute;
-    width: 240px;
-    height: 240px;
-    border-radius: 50%;
-    background: rgba(13,148,136,.16);
-    filter: blur(70px);
-    pointer-events: none;
-    animation: glowMove 9s ease-in-out infinite alternate;
-}
-
-.glow-one {
-    top: 15%;
-    right: 10%;
-}
-
-.glow-two {
-    bottom: 5%;
-    left: 10%;
-    background: rgba(37,99,235,.22);
-    animation-delay: -4s;
-}
-
-@keyframes glowMove {
-    from { transform: translate(0,0) scale(.9); }
-    to { transform: translate(35px,-30px) scale(1.2); }
-}
-
 /* BRAND */
 
 .brand {
@@ -127,21 +107,19 @@ input {
 }
 
 .brand-logo {
-    width: 45px;
-    height: 45px;
+    width: 44px;
+    height: 44px;
     display: grid;
     place-items: center;
     flex-shrink: 0;
-    border-radius: 13px;
-    color: #7ff3df;
-    background: rgba(255,255,255,.11);
-    border: 1px solid rgba(255,255,255,.16);
-    box-shadow: 0 5px 20px rgba(0,0,0,.12);
+    border-radius: 12px;
+    color: white;
+    background: var(--blue);
 }
 
 .brand-logo svg {
-    width: 27px;
-    height: 27px;
+    width: 25px;
+    height: 25px;
 }
 
 .brand-name {
@@ -153,7 +131,7 @@ input {
 .brand-subtitle {
     display: block;
     margin-top: 3px;
-    color: #afc7dd;
+    color: #94a3b8;
     font-size: 10px;
     letter-spacing: 1.1px;
     text-transform: uppercase;
@@ -176,11 +154,11 @@ input {
     align-items: center;
     gap: 8px;
     margin-bottom: 22px;
-    padding: 8px 13px;
-    border: 1px solid rgba(94,234,212,.3);
+    padding: 8px 14px;
+    border: 1px solid rgba(37,99,235,.4);
     border-radius: 30px;
-    background: rgba(13,148,136,.13);
-    color: #9df0e3;
+    background: rgba(37,99,235,.15);
+    color: #93c5fd;
     font-size: 10px;
     font-weight: 800;
     letter-spacing: 1.3px;
@@ -191,13 +169,13 @@ input {
     width: 7px;
     height: 7px;
     border-radius: 50%;
-    background: #5eead4;
-    box-shadow: 0 0 0 4px rgba(94,234,212,.13);
+    background: var(--blue);
+    box-shadow: 0 0 0 4px rgba(37,99,235,.2);
     animation: dotPulse 2s infinite;
 }
 
 @keyframes dotPulse {
-    50% { box-shadow: 0 0 0 8px rgba(94,234,212,0); }
+    50% { box-shadow: 0 0 0 8px rgba(37,99,235,0); }
 }
 
 .visual-content h1 {
@@ -210,12 +188,12 @@ input {
 }
 
 .visual-content h1 span {
-    color: #5eead4;
+    color: #60a5fa;
 }
 
 .visual-description {
     max-width: 410px;
-    color: #c1d3e6;
+    color: #cbd5e1;
     font-size: 14px;
     line-height: 1.9;
 }
@@ -249,8 +227,8 @@ input {
     top: 40px;
     right: 32px;
     border-radius: 50%;
-    background: #5eead4;
-    box-shadow: 0 0 15px rgba(94,234,212,.7);
+    background: var(--blue);
+    box-shadow: 0 0 10px rgba(37,99,235,.6);
 }
 
 .orbit-two {
@@ -258,7 +236,7 @@ input {
     height: 230px;
     transform: rotate(-25deg);
     border-style: dashed;
-    border-color: rgba(148,210,226,.15);
+    border-color: rgba(255,255,255,.12);
     animation: orbitReverse 32s linear infinite;
 }
 
@@ -275,10 +253,10 @@ input {
     z-index: 2;
     width: 265px;
     padding: 19px;
-    border: 1px solid rgba(255,255,255,.7);
+    border: 1px solid var(--border);
     border-radius: 17px;
-    background: rgba(255,255,255,.97);
-    box-shadow: 0 25px 55px rgba(0,0,0,.28);
+    background: var(--surface);
+    box-shadow: 0 20px 45px rgba(0,0,0,.22);
     color: var(--navy);
     animation: ballotFloat 5s ease-in-out infinite;
     transform-style: preserve-3d;
@@ -295,7 +273,7 @@ input {
     justify-content: space-between;
     padding-bottom: 13px;
     margin-bottom: 13px;
-    border-bottom: 1px solid #e8eef5;
+    border-bottom: 1px solid var(--border);
 }
 
 .ballot-heading {
@@ -311,7 +289,7 @@ input {
     place-items: center;
     border-radius: 8px;
     color: white;
-    background: linear-gradient(135deg,var(--blue),var(--teal));
+    background: var(--blue);
 }
 
 .ballot-mini-logo svg {
@@ -321,7 +299,7 @@ input {
 
 .ballot-subtitle {
     margin-bottom: 12px;
-    color: #8190a4;
+    color: var(--muted);
     font-size: 9px;
 }
 
@@ -331,24 +309,14 @@ input {
     gap: 10px;
     padding: 9px;
     margin-bottom: 8px;
-    border: 1px solid #e5ebf3;
+    border: 1px solid var(--border);
     border-radius: 9px;
-    background: #f9fbfe;
+    background: var(--page);
 }
 
 .candidate-row:nth-of-type(3) {
-    animation: selectedGlow 3s ease-in-out infinite;
-}
-
-@keyframes selectedGlow {
-    0%,100% {
-        border-color: #dce7f3;
-        background: #f9fbfe;
-    }
-    50% {
-        border-color: #59cbb8;
-        background: #ecfaf7;
-    }
+    border-color: var(--blue);
+    background: #eff6ff;
 }
 
 .candidate-avatar {
@@ -358,20 +326,10 @@ input {
     place-items: center;
     flex-shrink: 0;
     border-radius: 9px;
-    color: #315a83;
-    background: #dceaff;
+    color: var(--blue);
+    background: #dbeafe;
     font-size: 10px;
     font-weight: 800;
-}
-
-.candidate-avatar.teal {
-    color: #087e75;
-    background: #d7f5ef;
-}
-
-.candidate-avatar.purple {
-    color: #7252ac;
-    background: #eee5ff;
 }
 
 .candidate-detail {
@@ -384,14 +342,14 @@ input {
     height: 6px;
     margin-bottom: 5px;
     border-radius: 20px;
-    background: #9cafc5;
+    background: #94a3b8;
 }
 
 .candidate-small-line {
     width: 46px;
     height: 4px;
     border-radius: 20px;
-    background: #d3deea;
+    background: var(--border);
 }
 
 .candidate-check {
@@ -399,21 +357,15 @@ input {
     height: 19px;
     display: grid;
     place-items: center;
-    border: 1.5px solid #c2cedd;
+    border: 1.5px solid #cbd5e1;
     border-radius: 50%;
     color: white;
     font-size: 11px;
 }
 
 .candidate-row:nth-of-type(3) .candidate-check {
-    background: var(--teal);
-    border-color: var(--teal);
-    animation: checkPop 3s ease-in-out infinite;
-}
-
-@keyframes checkPop {
-    0%,30%,100% { transform: scale(.8); opacity: .5; }
-    45%,80% { transform: scale(1); opacity: 1; }
+    background: var(--blue);
+    border-color: var(--blue);
 }
 
 .ballot-footer {
@@ -421,7 +373,7 @@ input {
     justify-content: space-between;
     align-items: center;
     padding-top: 12px;
-    color: #728298;
+    color: var(--muted);
     font-size: 9px;
     font-weight: 700;
 }
@@ -430,7 +382,7 @@ input {
     display: flex;
     align-items: center;
     gap: 5px;
-    color: #07816e;
+    color: var(--blue);
 }
 
 .verified svg {
@@ -447,11 +399,11 @@ input {
     place-items: center;
     width: 43px;
     height: 43px;
-    border: 1px solid rgba(255,255,255,.2);
+    border: 1px solid rgba(255,255,255,.15);
     border-radius: 13px;
-    color: #a6f2e5;
-    background: rgba(37,75,109,.85);
-    box-shadow: 0 10px 25px rgba(0,0,0,.16);
+    color: #93c5fd;
+    background: rgba(255,255,255,.08);
+    box-shadow: 0 8px 20px rgba(0,0,0,.15);
 }
 
 .float-icon svg {
@@ -468,7 +420,6 @@ input {
 .float-check {
     bottom: 29px;
     left: 26px;
-    color: #a5f3c9;
     animation: iconFloat 5s ease-in-out infinite reverse;
 }
 
@@ -485,12 +436,12 @@ input {
     display: flex;
     justify-content: space-between;
     gap: 15px;
-    color: #a9bfd5;
+    color: #94a3b8;
     font-size: 10px;
 }
 
 .visual-footer span:last-child {
-    color: #71dfce;
+    color: #93c5fd;
 }
 
 /* RIGHT LOGIN PANEL */
@@ -528,8 +479,8 @@ input {
     margin-bottom: 25px;
     border-radius: 16px;
     color: white;
-    background: linear-gradient(135deg,var(--blue),var(--teal));
-    box-shadow: 0 9px 20px rgba(37,99,235,.2);
+    background: var(--blue);
+    box-shadow: 0 8px 18px rgba(37,99,235,.2);
 }
 
 .login-top-icon svg {
@@ -540,7 +491,7 @@ input {
 .login-heading .eyebrow {
     display: block;
     margin-bottom: 9px;
-    color: var(--teal);
+    color: var(--blue);
     font-size: 11px;
     font-weight: 800;
     letter-spacing: 1.2px;
@@ -608,17 +559,14 @@ input:focus {
     position: absolute;
     top: 50%;
     right: 10px;   
-     transform: translateY(-50%);
+    transform: translateY(-50%);
     display: grid;
     place-items: center;
     padding: 7px;
     border: 0;
     border-radius: 6px;
     color: var(--muted);
-
     background: transparent;
-    border: 0;
-    border-radius: 5px;
     cursor: pointer;
 }
 
@@ -644,18 +592,18 @@ input:focus {
     border: 0;
     border-radius: 9px;
     color: white;
-    background: linear-gradient(105deg,#2563eb,#1d4ed8);
-    box-shadow: 0 7px 16px rgba(37,99,235,.17);
+    background: var(--blue);
+    box-shadow: 0 6px 16px rgba(37,99,235,.18);
     font-size: 14px;
     font-weight: 800;
     cursor: pointer;
-    transition: transform .2s, box-shadow .2s, filter .2s;
+    transition: background .15s, transform .15s, box-shadow .15s;
 }
 
 .login-button:hover {
+    background: var(--blue-hover);
     transform: translateY(-2px);
-    box-shadow: 0 11px 23px rgba(37,99,235,.25);
-    filter: brightness(1.05);
+    box-shadow: 0 10px 22px rgba(37,99,235,.25);
 }
 
 .login-button:active {
@@ -685,7 +633,7 @@ input:focus {
 .security-note svg {
     width: 16px;
     height: 16px;
-    color: var(--teal);
+    color: var(--blue);
 }
 
 .login-footer {
@@ -809,11 +757,8 @@ input:focus {
 
 <div class="page-wrapper">
 
-    <!-- LEFT: ANIMATED ELECTION VISUAL -->
+    <!-- LEFT: BRAND & BALLOT VISUAL -->
     <section class="visual-panel">
-
-        <div class="glow glow-one"></div>
-        <div class="glow glow-two"></div>
 
         <header class="brand">
             <div class="brand-logo">
@@ -902,7 +847,7 @@ input:focus {
                     </div>
 
                     <div class="candidate-row">
-                        <div class="candidate-avatar teal">B</div>
+                        <div class="candidate-avatar">B</div>
                         <div class="candidate-detail">
                             <div class="candidate-line"></div>
                             <div class="candidate-small-line"></div>
@@ -911,7 +856,7 @@ input:focus {
                     </div>
 
                     <div class="candidate-row">
-                        <div class="candidate-avatar purple">C</div>
+                        <div class="candidate-avatar">C</div>
                         <div class="candidate-detail">
                             <div class="candidate-line"></div>
                             <div class="candidate-small-line"></div>
@@ -969,6 +914,16 @@ input:focus {
                 </p>
             </div>
 
+            <?php if (!empty($flashSuccess)): ?>
+                <div style="background: #e8f8ef; border: 1px solid #a7f3d0; border-radius: 9px; padding: 13px 15px; margin-bottom: 22px; color: #167548; font-size: 13px; line-height: 1.5; display: flex; align-items: center; gap: 9px;">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="flex-shrink:0;">
+                        <circle cx="12" cy="12" r="9"/>
+                        <path d="M8 12L11 15L16 9"/>
+                    </svg>
+                    <span><?= htmlspecialchars($flashSuccess, ENT_QUOTES, "UTF-8") ?></span>
+                </div>
+            <?php endif; ?>
+
             <form action="login_process.php" method="POST">
 
                 <div class="form-group">
@@ -980,7 +935,7 @@ input:focus {
                         name="student_id"
                         placeholder="Enter your Student ID"
                         autocomplete="username"
-                        maxlength="20"
+                        maxlength="30"
                         required
                     >
                 </div>
@@ -1031,6 +986,10 @@ input:focus {
                 </button>
 
             </form>
+
+            <div style="margin-top: 18px; text-align: center; font-size: 13px; color: var(--muted);">
+                Don't have an account? <a href="signup.php" style="color: var(--blue); font-weight: 750; text-decoration: none;">Create student account</a>
+            </div>
 
             <div class="security-note">
                 <svg viewBox="0 0 24 24" fill="none"

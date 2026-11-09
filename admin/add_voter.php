@@ -26,12 +26,14 @@ $student_id = "";
 $full_name = "";
 $department = "";
 $level = "";
+$email = "";
 
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
     $student_id = trim($_POST["student_id"] ?? "");
     $full_name = trim($_POST["full_name"] ?? "");
     $department = trim($_POST["department"] ?? "");
     $level = trim($_POST["level"] ?? "");
+    $email = strtolower(trim($_POST["email"] ?? ""));
     $password = $_POST["password"] ?? "";
 
     $sessionToken = (string)($_SESSION["csrf_token"] ?? "");
@@ -62,20 +64,30 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         (int)$level % 100 !== 0
     ) {
         $error = "Select a valid level between 100 and 700.";
+    } elseif ($email !== "" && !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        $error = "Please enter a valid email address.";
     } elseif (strlen($password) < 6) {
         $error = "The temporary password must contain at least 6 characters.";
     } else {
         try {
             $stmt = $pdo->prepare("
-                SELECT id
+                SELECT student_id, email
                 FROM users
-                WHERE student_id = :student_id
+                WHERE student_id = :student_id OR (:email != '' AND email = :email)
                 LIMIT 1
             ");
-            $stmt->execute(["student_id" => $student_id]);
+            $stmt->execute([
+                "student_id" => $student_id,
+                "email"      => $email,
+            ]);
+            $existing = $stmt->fetch();
 
-            if ($stmt->fetch()) {
-                $error = "A user with this Student ID already exists.";
+            if ($existing) {
+                if (strcasecmp($existing["student_id"], $student_id) === 0) {
+                    $error = "A user with this Student ID already exists.";
+                } else {
+                    $error = "A user with this Email address already exists.";
+                }
             } else {
                 $hashed_password = password_hash(
                     $password,
@@ -85,6 +97,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                 $stmt = $pdo->prepare("
                     INSERT INTO users (
                         student_id,
+                        email,
                         full_name,
                         department,
                         level,
@@ -94,6 +107,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                         must_change_pass
                     ) VALUES (
                         :student_id,
+                        :email,
                         :full_name,
                         :department,
                         :level,
@@ -106,10 +120,11 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
                 $stmt->execute([
                     "student_id" => $student_id,
-                    "full_name" => $full_name,
+                    "email"      => $email !== "" ? $email : null,
+                    "full_name"  => $full_name,
                     "department" => $department,
-                    "level" => (int)$level,
-                    "password" => $hashed_password
+                    "level"      => (int)$level,
+                    "password"   => $hashed_password
                 ]);
 
                 header("Location: voters.php?registered=1");
@@ -644,6 +659,20 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                                 </option>
                             <?php endforeach; ?>
                         </select>
+                    </div>
+
+                    <div class="form-group" style="grid-column: 1 / -1;">
+                        <label for="email">
+                            Email Address <span style="color:var(--muted); font-weight:normal;">(Optional, for notifications)</span>
+                        </label>
+                        <input
+                            type="email"
+                            id="email"
+                            name="email"
+                            value="<?= e($email) ?>"
+                            maxlength="190"
+                            placeholder="e.g. student@example.com"
+                        >
                     </div>
                 </div>
 
