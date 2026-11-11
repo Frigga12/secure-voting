@@ -43,7 +43,7 @@ body {
     min-height: 100vh;
     font-family: "Segoe UI", Arial, sans-serif;
     color: var(--navy);
-    background: var(--page);
+    background: var(--navy);
 }
 
 button,
@@ -51,7 +51,7 @@ input {
     font: inherit;
 }
 
-/* Main split-screen layout */
+/* Main two-column layout */
 
 .page-wrapper {
     min-height: 100vh;
@@ -59,7 +59,7 @@ input {
     grid-template-columns: 1.08fr .92fr;
 }
 
-/* LEFT BRAND PANEL (Solid Navy 30% Structural Presence) */
+/* LEFT BRAND PANEL */
 
 .visual-panel {
     position: relative;
@@ -69,15 +69,15 @@ input {
     flex-direction: column;
     justify-content: space-between;
     padding: 35px 7%;
-    color: white;
-    background: var(--navy);
+    color: var(--navy);
+    background: var(--page);
 }
 
 .visual-panel::before,
 .visual-panel::after {
     content: "";
     position: absolute;
-    border: 1px solid rgba(255,255,255,.07);
+    border: 1px solid rgba(15,32,56,.08);
     border-radius: 50%;
     pointer-events: none;
 }
@@ -126,12 +126,13 @@ input {
     font-size: 15px;
     font-weight: 800;
     letter-spacing: .2px;
+    color: var(--navy);
 }
 
 .brand-subtitle {
     display: block;
     margin-top: 3px;
-    color: #94a3b8;
+    color: var(--muted);
     font-size: 10px;
     letter-spacing: 1.1px;
     text-transform: uppercase;
@@ -155,10 +156,10 @@ input {
     gap: 8px;
     margin-bottom: 22px;
     padding: 8px 14px;
-    border: 1px solid rgba(37,99,235,.4);
+    border: 1px solid rgba(37,99,235,.3);
     border-radius: 30px;
-    background: rgba(37,99,235,.15);
-    color: #93c5fd;
+    background: rgba(37,99,235,.08);
+    color: var(--blue);
     font-size: 10px;
     font-weight: 800;
     letter-spacing: 1.3px;
@@ -181,19 +182,19 @@ input {
 .visual-content h1 {
     max-width: 500px;
     margin-bottom: 17px;
-    color: white;
+    color: var(--navy);
     font-size: clamp(35px,4vw,55px);
     line-height: 1.13;
     letter-spacing: -1.7px;
 }
 
 .visual-content h1 span {
-    color: #60a5fa;
+    color: var(--blue);
 }
 
 .visual-description {
     max-width: 410px;
-    color: #cbd5e1;
+    color: var(--muted);
     font-size: 14px;
     line-height: 1.9;
 }
@@ -214,7 +215,7 @@ input {
     position: absolute;
     width: 290px;
     height: 290px;
-    border: 1px solid rgba(148,210,226,.18);
+    border: 1px solid rgba(15,32,56,.12);
     border-radius: 50%;
     animation: orbitRotate 25s linear infinite;
 }
@@ -236,7 +237,7 @@ input {
     height: 230px;
     transform: rotate(-25deg);
     border-style: dashed;
-    border-color: rgba(255,255,255,.12);
+    border-color: rgba(15,32,56,.14);
     animation: orbitReverse 32s linear infinite;
 }
 
@@ -399,10 +400,10 @@ input {
     place-items: center;
     width: 43px;
     height: 43px;
-    border: 1px solid rgba(255,255,255,.15);
+    border: 1px solid rgba(37,99,235,.14);
     border-radius: 13px;
-    color: #93c5fd;
-    background: rgba(255,255,255,.08);
+    color: var(--blue);
+    background: rgba(37,99,235,.06);
     box-shadow: 0 8px 20px rgba(0,0,0,.15);
 }
 
@@ -436,12 +437,12 @@ input {
     display: flex;
     justify-content: space-between;
     gap: 15px;
-    color: #94a3b8;
+    color: var(--muted);
     font-size: 10px;
 }
 
 .visual-footer span:last-child {
-    color: #93c5fd;
+    color: var(--blue);
 }
 
 /* RIGHT LOGIN PANEL */
@@ -452,7 +453,7 @@ input {
     align-items: center;
     justify-content: center;
     padding: 45px 10%;
-    background: #fbfcfe;
+    background: var(--page);
 }
 
 .login-content {
@@ -738,6 +739,119 @@ input:focus {
     }
 }
 
+/* Animated full-screen sign-in design */
+#network-animation {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+}
+
+.page-wrapper {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px 16px;
+}
+
+.visual-panel {
+    display: none;
+}
+
+.login-panel {
+    width: 100%;
+    min-height: 100vh;
+    padding: 0;
+    background: transparent;
+}
+
+.login-content {
+    max-width: 410px;
+    padding: 30px;
+    border: 1px solid rgba(255,255,255,.55);
+    border-radius: 12px;
+    background: #fff;
+    box-shadow: 0 24px 70px rgba(0,0,0,.4);
+    animation: contentReveal .8s ease both;
+}
+
+.login-top-icon {
+    display: none;
+}
+
+.login-heading {
+    margin: -30px -30px 22px;
+    padding: 18px 22px;
+    border-radius: 11px 11px 0 0;
+    background: var(--blue);
+    text-align: center;
+}
+
+.login-heading h2 {
+    margin: 0;
+    color: #fff;
+    font-size: clamp(18px, 5vw, 23px);
+    font-weight: 850;
+    letter-spacing: .3px;
+    line-height: 1.25;
+}
+
+.login-heading p {
+    margin: 5px 0 0;
+    color: rgba(255,255,255,.9);
+    font-size: 12px;
+    line-height: 1.55;
+}
+
+.login-welcome h3 {
+    margin-bottom: 6px;
+    color: var(--navy);
+    font-size: 21px;
+    letter-spacing: -.4px;
+}
+
+.login-welcome p {
+    margin-bottom: 22px;
+    color: var(--muted);
+    font-size: 12px;
+    line-height: 1.6;
+}
+
+.login-content input {
+    min-height: 44px;
+}
+
+.login-footer {
+    margin-top: 26px;
+}
+
+@media (max-width: 680px) {
+    .page-wrapper {
+        display: flex;
+        min-height: 100vh;
+        padding: 20px 14px;
+    }
+
+    .login-panel {
+        min-height: 100vh;
+        padding: 0;
+    }
+
+    .login-content {
+        max-width: 410px;
+        padding: 25px;
+    }
+
+    .login-heading {
+        margin: -25px -25px 22px;
+        padding: 18px 25px;
+    }
+}
+
 /* Accessibility */
 
 @media (prefers-reduced-motion: reduce) {
@@ -755,6 +869,7 @@ input:focus {
 
 <body>
 
+<canvas id="network-animation" aria-hidden="true"></canvas>
 <div class="page-wrapper">
 
     <!-- LEFT: BRAND & BALLOT VISUAL -->
@@ -906,8 +1021,12 @@ input:focus {
             </div>
 
             <div class="login-heading">
-                <span class="eyebrow">Account access</span>
-                <h2>Welcome back.</h2>
+                <h2>YOUR VOTE. YOUR VOICE.</h2>
+                <p>Make your voice count.</p>
+            </div>
+
+            <div class="login-welcome">
+                <h3>Welcome back.</h3>
                 <p>
                     Sign in using your registered student ID
                     and password to continue to your election portal.
@@ -1031,6 +1150,74 @@ toggleButton.addEventListener("click", function () {
     );
 });
 </script>
+<script>
+(() => {
+    const canvas = document.getElementById("network-animation");
+    const context = canvas.getContext("2d");
+    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    let width = 0;
+    let height = 0;
+    let frame = 0;
 
+    function resize() {
+        const ratio = Math.min(window.devicePixelRatio || 1, 2);
+        width = window.innerWidth;
+        height = window.innerHeight;
+        canvas.width = width * ratio;
+        canvas.height = height * ratio;
+        context.setTransform(ratio, 0, 0, ratio, 0, 0);
+    }
+
+    function draw() {
+        context.clearRect(0, 0, width, height);
+        const time = reducedMotion ? 0 : frame * 0.012;
+        const center = height * 0.58;
+        const strands = Math.max(24, Math.min(42, Math.round(width / 30)));
+
+        for (let strand = 0; strand < strands; strand++) {
+            const offset = (strand - (strands - 1) / 2) * (height * 0.006);
+            const phase = strand * 0.39 + time;
+
+            context.beginPath();
+            for (let x = 0; x <= width; x += 8) {
+                const y = center + offset
+                    + Math.sin(x * 0.008 + phase) * height * 0.13
+                    + Math.sin(x * 0.0025 - phase * 0.7) * height * 0.055;
+                if (x === 0) context.moveTo(x, y);
+                else context.lineTo(x, y);
+            }
+            context.strokeStyle = `rgba(37, 99, 235, .22)`;
+            context.lineWidth = strand % 7 === 0 ? 1.2 : .65;
+            context.shadowColor = "rgba(0, 210, 220, .45)";
+            context.shadowBlur = strand % 7 === 0 ? 8 : 2;
+            context.stroke();
+            context.shadowBlur = 0;
+
+            for (let point = 0; point < 5; point++) {
+                const x = ((point * 0.23 + strand * 0.137 + time * 0.025) % 1) * width;
+                const y = center + offset
+                    + Math.sin(x * 0.008 + phase) * height * 0.13
+                    + Math.sin(x * 0.0025 - phase * 0.7) * height * 0.055;
+                context.beginPath();
+                context.arc(x, y, point === 2 ? 2 : 1.25, 0, Math.PI * 2);
+                context.fillStyle = "rgba(37, 99, 235, .9)";
+                context.shadowColor = context.fillStyle;
+                context.shadowBlur = 10;
+                context.fill();
+                context.shadowBlur = 0;
+            }
+        }
+
+        if (!reducedMotion) {
+            frame++;
+            requestAnimationFrame(draw);
+        }
+    }
+
+    resize();
+    window.addEventListener("resize", resize);
+    draw();
+})();
+</script>
 </body>
 </html>

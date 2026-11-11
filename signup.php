@@ -72,7 +72,7 @@ body {
     min-height: 100vh;
     font-family: "Segoe UI", Arial, sans-serif;
     color: var(--navy);
-    background: var(--page);
+    background: var(--navy);
 }
 
 button, input, select {
@@ -85,7 +85,7 @@ button, input, select {
     grid-template-columns: 1.05fr .95fr;
 }
 
-/* LEFT VISUAL PANEL (30% Solid Navy Structure) */
+/* LEFT VISUAL PANEL */
 .visual-panel {
     position: relative;
     min-height: 100vh;
@@ -94,15 +94,15 @@ button, input, select {
     flex-direction: column;
     justify-content: space-between;
     padding: 35px 7%;
-    color: white;
-    background: var(--navy);
+    color: var(--navy);
+    background: var(--page);
 }
 
 .visual-panel::before,
 .visual-panel::after {
     content: "";
     position: absolute;
-    border: 1px solid rgba(255,255,255,.07);
+    border: 1px solid rgba(15,32,56,.08);
     border-radius: 50%;
     pointer-events: none;
 }
@@ -147,76 +147,325 @@ button, input, select {
     font-size: 20px;
     font-weight: 750;
     letter-spacing: -.3px;
+    color: var(--navy);
 }
 
 .brand-sub {
     font-size: 11px;
-    color: #93c5fd;
+    color: var(--muted);
     text-transform: uppercase;
     letter-spacing: 1.2px;
 }
 
-.visual-center {
-    margin: 30px 0;
-    max-width: 480px;
+/* LEFT TEXT & ANIMATION STAGE (Identical aesthetic to login.php, zero gradients) */
+.visual-content {
+    position: relative;
+    z-index: 2;
+    width: 100%;
+    max-width: 530px;
+    margin: auto 0;
+    padding: 30px 0;
+    animation: contentReveal .9s ease both;
 }
 
-.visual-center h1 {
-    font-size: clamp(26px, 3.2vw, 36px);
+.visual-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 20px;
+    padding: 8px 14px;
+    border: 1px solid rgba(37,99,235,.3);
+    border-radius: 30px;
+    background: rgba(37,99,235,.08);
+    color: var(--blue);
+    font-size: 10px;
     font-weight: 800;
-    line-height: 1.2;
-    letter-spacing: -.6px;
-    margin-bottom: 12px;
+    letter-spacing: 1.3px;
+    text-transform: uppercase;
 }
 
-.visual-center p {
-    font-size: 14px;
-    color: #cbd5e1;
-    line-height: 1.7;
-    margin-bottom: 26px;
+.live-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--blue);
+    box-shadow: 0 0 0 4px rgba(37,99,235,.2);
+    animation: dotPulse 2s infinite;
 }
 
-.features-grid {
+@keyframes dotPulse {
+    50% { box-shadow: 0 0 0 8px rgba(37,99,235,0); }
+}
+
+.visual-content h1 {
+    max-width: 500px;
+    margin-bottom: 14px;
+    color: var(--navy);
+    font-size: clamp(32px,3.6vw,48px);
+    line-height: 1.15;
+    letter-spacing: -1.5px;
+}
+
+.visual-content h1 span {
+    color: var(--blue);
+}
+
+.visual-description {
+    max-width: 420px;
+    color: var(--muted);
+    font-size: 13.5px;
+    line-height: 1.8;
+}
+
+.animation-stage {
+    position: relative;
+    width: min(100%, 420px);
+    height: 290px;
+    margin: 25px auto 0;
     display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 14px;
+    place-items: center;
+    perspective: 900px;
 }
 
-.feature-card {
-    background: rgba(255,255,255,0.06);
-    border: 1px solid rgba(255,255,255,0.1);
-    border-radius: 12px;
-    padding: 14px 16px;
+.orbit {
+    position: absolute;
+    width: 280px;
+    height: 280px;
+    border: 1px solid rgba(15,32,56,.12);
+    border-radius: 50%;
+    animation: orbitRotate 25s linear infinite;
 }
 
-.feature-card svg {
-    width: 22px;
-    height: 22px;
-    color: #60a5fa;
-    margin-bottom: 8px;
+.orbit::before {
+    content: "";
+    position: absolute;
+    width: 8px;
+    height: 8px;
+    top: 35px;
+    right: 30px;
+    border-radius: 50%;
+    background: var(--blue);
+    box-shadow: 0 0 10px rgba(37,99,235,.6);
 }
 
-.feature-card h3 {
-    font-size: 13px;
-    font-weight: 750;
+.orbit-two {
+    width: 340px;
+    height: 220px;
+    transform: rotate(-25deg);
+    border-style: dashed;
+    border-color: rgba(15,32,56,.14);
+    animation: orbitReverse 32s linear infinite;
+}
+
+@keyframes orbitRotate {
+    to { transform: rotate(360deg); }
+}
+
+@keyframes orbitReverse {
+    to { transform: rotate(-385deg); }
+}
+
+/* FLOATING CREDENTIAL CARD */
+.credential-card {
+    position: relative;
+    z-index: 2;
+    width: 270px;
+    padding: 20px;
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    background: var(--surface);
+    box-shadow: 0 20px 45px rgba(0,0,0,.22);
+    color: var(--navy);
+    animation: credentialFloat 5s ease-in-out infinite;
+    transform-style: preserve-3d;
+}
+
+@keyframes credentialFloat {
+    0%,100% { transform: translateY(0) rotate(-2deg); }
+    50% { transform: translateY(-13px) rotate(1.5deg); }
+}
+
+.card-header-mini {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-bottom: 12px;
+    margin-bottom: 12px;
+    border-bottom: 1px solid var(--border);
+}
+
+.card-title-mini {
+    font-size: 10.5px;
+    font-weight: 900;
+    letter-spacing: .6px;
+    color: var(--navy);
+}
+
+.card-badge-mini {
+    width: 26px;
+    height: 26px;
+    display: grid;
+    place-items: center;
+    border-radius: 8px;
     color: white;
-    margin-bottom: 3px;
+    background: var(--blue);
 }
 
-.feature-card p {
-    font-size: 11px;
-    color: #94a3b8;
-    line-height: 1.4;
-    margin: 0;
+.card-badge-mini svg {
+    width: 15px;
+    height: 15px;
+}
+
+.credential-user-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 14px;
+}
+
+.user-avatar-circle {
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    background: #dbeafe;
+    color: var(--blue);
+    display: grid;
+    place-items: center;
+    flex-shrink: 0;
+}
+
+.user-avatar-circle svg {
+    width: 20px;
+    height: 20px;
+}
+
+.user-meta-lines {
+    flex: 1;
+}
+
+.meta-line {
+    border-radius: 20px;
+    background: #cbd5e1;
+}
+
+.meta-wide {
+    width: 90px;
+    height: 7px;
+    margin-bottom: 5px;
+    background: var(--navy);
+}
+
+.meta-short {
+    width: 60px;
+    height: 5px;
+}
+
+.credential-status-box {
+    background: var(--page);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 12px;
+    margin-bottom: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.status-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 10px;
+}
+
+.status-lbl {
+    color: var(--muted);
+    font-weight: 750;
+}
+
+.status-val {
+    font-weight: 800;
+}
+
+.status-val.verified {
+    color: var(--blue);
+}
+
+.status-val.active-otp {
+    color: #0284c7;
+}
+
+.card-footer-mini {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-top: 10px;
+    color: var(--muted);
+    font-size: 9px;
+    font-weight: 750;
+    letter-spacing: .4px;
+}
+
+/* FLOATING BADGES */
+.float-icon {
+    position: absolute;
+    z-index: 3;
+    display: grid;
+    place-items: center;
+    width: 42px;
+    height: 42px;
+    border: 1px solid rgba(37,99,235,.14);
+    border-radius: 12px;
+    color: var(--blue);
+    background: rgba(37,99,235,.06);
+    box-shadow: 0 8px 20px rgba(0,0,0,.15);
+}
+
+.float-icon svg {
+    width: 20px;
+    height: 20px;
+}
+
+.float-user {
+    top: 20px;
+    right: 28px;
+    animation: iconFloat 4s ease-in-out infinite;
+}
+
+.float-shield {
+    bottom: 24px;
+    left: 22px;
+    animation: iconFloat 5s ease-in-out infinite reverse;
+}
+
+@keyframes iconFloat {
+    0%,100% { transform: translateY(0) rotate(0); }
+    50% { transform: translateY(-12px) rotate(7deg); }
+}
+
+@keyframes contentReveal {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes formReveal {
+    from { opacity: 0; transform: translateX(25px); }
+    to { opacity: 1; transform: translateX(0); }
 }
 
 .visual-footer {
+    position: relative;
+    z-index: 2;
     display: flex;
     justify-content: space-between;
     font-size: 12px;
-    color: #94a3b8;
-    border-top: 1px solid rgba(255,255,255,0.1);
+    color: var(--muted);
+    border-top: 1px solid rgba(15,32,56,.1);
     padding-top: 20px;
+}
+
+.visual-footer span:last-child {
+    color: var(--blue);
 }
 
 /* RIGHT: FORM PANEL */
@@ -468,10 +717,136 @@ input:focus, select:focus {
         gap: 0;
     }
 }
+
+/* Animated full-screen sign-up design */
+#network-animation {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+}
+
+.page-wrapper {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    padding: 28px 16px;
+}
+
+.visual-panel {
+    display: none;
+}
+
+.signup-panel {
+    width: 100%;
+    min-height: 100vh;
+    padding: 0;
+    overflow: visible;
+    background: transparent;
+}
+
+.signup-content {
+    max-width: 520px;
+    padding: 30px;
+    border: 1px solid rgba(255,255,255,.55);
+    border-radius: 12px;
+    background: #fff;
+    box-shadow: 0 24px 70px rgba(0,0,0,.4);
+    animation: contentReveal .8s ease both;
+}
+
+.portal-tagline {
+    margin: -30px -30px 22px;
+    padding: 18px 22px;
+    border-radius: 11px 11px 0 0;
+    background: var(--blue);
+    text-align: center;
+}
+
+.portal-tagline h1 {
+    margin: 0;
+    color: #fff;
+    font-size: clamp(18px, 5vw, 23px);
+    font-weight: 850;
+    letter-spacing: .3px;
+    line-height: 1.25;
+}
+
+.portal-tagline h1 span {
+    color: #fff;
+}
+
+.portal-tagline p {
+    margin-top: 5px;
+    color: rgba(255,255,255,.9);
+    font-size: 12px;
+    line-height: 1.6;
+}
+
+.signup-top-icon {
+    display: none;
+}
+
+.signup-heading {
+    margin: 0 0 20px;
+}
+
+.signup-heading .eyebrow {
+    margin-bottom: 6px;
+    color: var(--blue);
+}
+
+.signup-heading h2 {
+    margin-bottom: 6px;
+    color: var(--navy);
+    font-size: 21px;
+    letter-spacing: -.4px;
+}
+
+.signup-heading p {
+    margin: 0;
+    color: var(--muted);
+    font-size: 12px;
+    line-height: 1.6;
+}
+
+.signup-content input,
+.signup-content select {
+    min-height: 44px;
+}
+
+@media (max-width: 900px) {
+    .page-wrapper {
+        display: flex;
+        min-height: 100vh;
+        padding: 20px 14px;
+    }
+
+    .signup-panel {
+        min-height: 100vh;
+        padding: 0;
+    }
+
+    .signup-content {
+        max-width: 520px;
+        padding: 25px;
+    }
+
+    .portal-tagline {
+        margin: -25px -25px 22px;
+        padding: 18px 25px;
+    }
+}
 </style>
 </head>
 <body>
 
+<canvas id="network-animation" aria-hidden="true"></canvas>
 <div class="page-wrapper">
 
     <!-- LEFT VISUAL PANEL -->
@@ -488,47 +863,84 @@ input:focus, select:focus {
             </div>
         </header>
 
-        <div class="visual-center">
-            <h1>Student Self-Registration</h1>
-            <p>
-                Create your student voter account in seconds. After entering your academic details, you'll receive a secure single-use 6-digit confirmation code via email.
+        <div class="visual-content">
+
+            <div class="visual-tag">
+                <span class="live-dot"></span>
+                Student Self-Registration
+            </div>
+
+            <h1>
+                CLAIM YOUR<br>
+                STUDENT <span>VOICE.</span>
+            </h1>
+
+            <p class="visual-description">
+                Register your verified academic credentials to access your voter dashboard, review candidates, and participate in university governance.
             </p>
 
-            <div class="features-grid">
-                <div class="feature-card">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <div class="animation-stage">
+
+                <div class="orbit"></div>
+                <div class="orbit orbit-two"></div>
+
+                <div class="float-icon float-user">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                        <circle cx="8.5" cy="7" r="4"/>
+                        <line x1="20" y1="8" x2="20" y2="14"/>
+                        <line x1="23" y1="11" x2="17" y2="11"/>
+                    </svg>
+                </div>
+
+                <div class="float-icon float-shield">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                        <path d="M9 12l2 2 4-4"/>
                     </svg>
-                    <h3>1 Matric = 1 Account</h3>
-                    <p>Strict uniqueness prevents duplicate or proxy voting accounts.</p>
                 </div>
 
-                <div class="feature-card">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <circle cx="12" cy="12" r="10"/>
-                        <polyline points="12 6 12 12 16 14"/>
-                    </svg>
-                    <h3>10-Minute OTP</h3>
-                    <p>Time-sensitive confirmation codes expire automatically.</p>
+                <!-- FLOATING DIGITAL VOTER CREDENTIAL CARD -->
+                <div class="credential-card">
+                    <div class="card-header-mini">
+                        <div class="card-title-mini">STUDENT VOTER PASS</div>
+                        <div class="card-badge-mini">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                <polyline points="20 6 9 17 4 12"></polyline>
+                            </svg>
+                        </div>
+                    </div>
+
+                    <div class="credential-user-row">
+                        <div class="user-avatar-circle">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                                <circle cx="12" cy="7" r="4"></circle>
+                            </svg>
+                        </div>
+                        <div class="user-meta-lines">
+                            <div class="meta-line meta-wide"></div>
+                            <div class="meta-line meta-short"></div>
+                        </div>
+                    </div>
+
+                    <div class="credential-status-box">
+                        <div class="status-item">
+                            <span class="status-lbl">MATRIC CHECK</span>
+                            <span class="status-val verified">✓ UNIQUE</span>
+                        </div>
+                        <div class="status-item">
+                            <span class="status-lbl">SECURITY OTP</span>
+                            <span class="status-val active-otp">10 MIN EXPIRY</span>
+                        </div>
+                    </div>
+
+                    <div class="card-footer-mini">
+                        <span>LASUSTECH PORTAL</span>
+                        <span style="color:var(--blue); font-weight:800;">VERIFIED</span>
+                    </div>
                 </div>
 
-                <div class="feature-card">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
-                        <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
-                    </svg>
-                    <h3>Password Security</h3>
-                    <p>Protected by modern, salted cryptographic hashing.</p>
-                </div>
-
-                <div class="feature-card">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
-                        <polyline points="22 4 12 14.01 9 11.01"/>
-                    </svg>
-                    <h3>Anti-Spam Shield</h3>
-                    <p>Resend cooldown & attempt limiting safeguard the platform.</p>
-                </div>
             </div>
         </div>
 
@@ -541,6 +953,11 @@ input:focus, select:focus {
     <!-- RIGHT: REGISTRATION FORM PANEL -->
     <main class="signup-panel">
         <div class="signup-content">
+
+            <div class="portal-tagline">
+                <h1>CLAIM YOUR<br>STUDENT <span>VOICE.</span></h1>
+                <p>Register to take part in student elections.</p>
+            </div>
 
             <div class="signup-top-icon">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -750,7 +1167,75 @@ signupForm.addEventListener("submit", (e) => {
     submitBtn.querySelector("span").textContent = "Sending Confirmation Code...";
 });
 </script>
+<script>
+(() => {
+    const canvas = document.getElementById("network-animation");
+    const context = canvas.getContext("2d");
+    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    let width = 0;
+    let height = 0;
+    let frame = 0;
+
+    function resize() {
+        const ratio = Math.min(window.devicePixelRatio || 1, 2);
+        width = window.innerWidth;
+        height = window.innerHeight;
+        canvas.width = width * ratio;
+        canvas.height = height * ratio;
+        context.setTransform(ratio, 0, 0, ratio, 0, 0);
+    }
+
+    function draw() {
+        context.clearRect(0, 0, width, height);
+        const time = reducedMotion ? 0 : frame * 0.012;
+        const center = height * 0.58;
+        const strands = Math.max(24, Math.min(42, Math.round(width / 30)));
+
+        for (let strand = 0; strand < strands; strand++) {
+            const offset = (strand - (strands - 1) / 2) * (height * 0.006);
+            const phase = strand * 0.39 + time;
+
+            context.beginPath();
+            for (let x = 0; x <= width; x += 8) {
+                const y = center + offset
+                    + Math.sin(x * 0.008 + phase) * height * 0.13
+                    + Math.sin(x * 0.0025 - phase * 0.7) * height * 0.055;
+                if (x === 0) context.moveTo(x, y);
+                else context.lineTo(x, y);
+            }
+            context.strokeStyle = `rgba(37, 99, 235, .22)`;
+            context.lineWidth = strand % 7 === 0 ? 1.2 : .65;
+            context.shadowColor = "rgba(0, 210, 220, .45)";
+            context.shadowBlur = strand % 7 === 0 ? 8 : 2;
+            context.stroke();
+            context.shadowBlur = 0;
+
+            for (let point = 0; point < 5; point++) {
+                const x = ((point * 0.23 + strand * 0.137 + time * 0.025) % 1) * width;
+                const y = center + offset
+                    + Math.sin(x * 0.008 + phase) * height * 0.13
+                    + Math.sin(x * 0.0025 - phase * 0.7) * height * 0.055;
+                context.beginPath();
+                context.arc(x, y, point === 2 ? 2 : 1.25, 0, Math.PI * 2);
+                context.fillStyle = "rgba(37, 99, 235, .9)";
+                context.shadowColor = context.fillStyle;
+                context.shadowBlur = 10;
+                context.fill();
+                context.shadowBlur = 0;
+            }
+        }
+
+        if (!reducedMotion) {
+            frame++;
+            requestAnimationFrame(draw);
+        }
+    }
+
+    resize();
+    window.addEventListener("resize", resize);
+    draw();
+})();
+</script>
 
 </body>
 </html>
-
